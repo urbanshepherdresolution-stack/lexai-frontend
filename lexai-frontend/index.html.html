@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexAI | Legal Adviser</title>
+    <style>
+        :root { --green: #1B3022; --gold: #C9A86A; --bg: #F9F7F2; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--green); margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        header { border-bottom: 2px solid var(--gold); padding-bottom: 20px; margin-bottom: 20px; }
+        #chat-box { height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; background: white; border-radius: 8px; margin-bottom: 15px; }
+        .msg { margin-bottom: 10px; padding: 10px; border-radius: 5px; }
+        .user { background: #e0e7ff; text-align: right; }
+        .ai { background: #f3f4f6; }
+        .input-area { display: flex; gap: 10px; }
+        textarea { flex-grow: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; background: var(--green); color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>LexAI — Legal Intelligence</h1></header>
+        <div id="chat-box"></div>
+        <div class="input-area">
+            <textarea id="user_input" placeholder="Describe your legal matter..."></textarea>
+            <button onclick="analyze()">Analyze Matter</button>
+        </div>
+    </div>
+
+    <script>
+        async function analyze() {
+            const userInput = document.getElementById('user_input');
+            const query = userInput.value;
+            const chatBox = document.getElementById('chat-box');
+            
+            if (!query.trim()) return;
+
+            chatBox.innerHTML += `<div class="msg user">${query}</div>`;
+            userInput.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            try {
+                // This route is handled by your _worker.js
+                const response = await fetch('/api/transcribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const data = await response.json();
+                chatBox.innerHTML += `<div class="msg ai">${data.message || 'Analysis Complete'}</div>`;
+            } catch (err) {
+                chatBox.innerHTML += `<div class="msg ai" style="color:red">Error: Could not connect to service.</div>`;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
