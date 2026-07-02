@@ -1,1 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexAI | Legal Adviser</title>
+    <style>
+        :root { --green: #1B3022; --gold: #C9A86A; --bg: #F9F7F2; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--green); margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        #chat-box { height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; background: white; border-radius: 8px; margin-bottom: 15px; }
+        .msg { margin-bottom: 10px; padding: 10px; border-radius: 5px; }
+        .user { background: #e0e7ff; text-align: right; }
+        .ai { background: #f3f4f6; }
+        .controls { display: flex; flex-direction: column; gap: 10px; }
+        textarea { width: 100%; padding: 10px; }
+        button { padding: 10px 20px; background: var(--green); color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LexAI — Legal Intelligence</h1>
+        <div id="chat-box"></div>
+        <div class="controls">
+            <textarea id="user_input" placeholder="Describe your legal matter..."></textarea>
+            <input type="file" id="file_input" accept=".pdf,.doc,.docx,.txt">
+            <button onclick="analyze()">Analyze Matter</button>
+        </div>
+    </div>
 
+    <script>
+        async function analyze() {
+            const query = document.getElementById('user_input').value;
+            const fileInput = document.getElementById('file_input');
+            const chatBox = document.getElementById('chat-box');
+            
+            if (!query.trim() && fileInput.files.length === 0) return;
+
+            chatBox.innerHTML += `<div class="msg user">${query || 'Uploaded file'}</div>`;
+            
+            const formData = new FormData();
+            formData.append('query', query);
+            if (fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+            }
+
+            try {
+                const response = await fetch('/api/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                chatBox.innerHTML += `<div class="msg ai">${data.message}</div>`;
+            } catch (err) {
+                chatBox.innerHTML += `<div class="msg ai" style="color:red">Error: Upload failed.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
