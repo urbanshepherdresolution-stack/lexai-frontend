@@ -6,10 +6,15 @@ export async function onRequestPost(context) {
     const query = formData.get('query');
     const file = formData.get('file');
 
-    // Basic text extraction for files
     let documentContent = "";
     if (file && file.size > 0) {
-      documentContent = await file.text();
+      let rawText = await file.text();
+      // TRUNCATE: Limit to 10,000 characters to prevent token overflow
+      if (rawText.length > 10000) {
+        documentContent = rawText.substring(0, 10000) + "\n\n...[Document truncated due to length]...";
+      } else {
+        documentContent = rawText;
+      }
     }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -26,14 +31,12 @@ export async function onRequestPost(context) {
 
     const result = await response.json();
 
-    // Check if the response actually contains the data we need
     if (result.choices && result.choices.length > 0) {
       return new Response(JSON.stringify({ message: result.choices[0].message.content }), {
         headers: { 'Content-Type': 'application/json' }
       });
     } else {
-      // If something went wrong, return the whole result so we can see what OpenAI sent back
-      return new Response(JSON.stringify({ message: "OpenAI returned an unexpected format: " + JSON.stringify(result) }), { status: 500 });
+      return new Response(JSON.stringify({ message: "OpenAI returned an error: " + JSON.stringify(result.error) }), { status: 500 });
     }
   } catch (err) {
     return new Response(JSON.stringify({ status: "error", message: err.message }), { status: 500 });
