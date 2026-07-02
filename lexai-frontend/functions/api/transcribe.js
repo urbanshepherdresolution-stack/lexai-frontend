@@ -1,17 +1,22 @@
 export async function onRequestPost(context) {
   try {
-    const input = await context.request.json();
+    const formData = await context.request.formData();
+    const query = formData.get('query');
+    const file = formData.get('file');
+
+    let fileInfo = "No document provided.";
+    if (file) {
+      fileInfo = `Processing document: ${file.name} (${file.type}).`;
+    }
+
     return new Response(JSON.stringify({ 
       status: "success", 
-      message: "Analysis complete: Backend is communicating correctly." 
+      message: `Analysis of "${query}" received. ${fileInfo}` 
     }), {
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*' 
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (err) {
-    return new Response(JSON.stringify({ status: "error", message: "Failed to parse JSON" }), {
+    return new Response(JSON.stringify({ status: "error", message: "Upload processing failed" }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
