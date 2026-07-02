@@ -6,15 +6,18 @@ export async function onRequestPost(context) {
     const query = formData.get('query');
     const file = formData.get('file');
 
-    let documentContent = "";
-    if (file && file.size > 0) {
-      let rawText = await file.text();
-      // TRUNCATE: Limit to 10,000 characters to prevent token overflow
-      if (rawText.length > 10000) {
-        documentContent = rawText.substring(0, 10000) + "\n\n...[Document truncated due to length]...";
-      } else {
-        documentContent = rawText;
-      }
+    let documentContent = "No text could be extracted from this file.";
+
+    if (file) {
+      // If it's a PDF, we treat it as binary. 
+      // NOTE: Without a library, we can't parse complex PDFs perfectly,
+      // but we can extract simple strings if the PDF isn't encrypted.
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      
+      // Simple extraction: look for readable text in the binary stream
+      const textDecoder = new TextDecoder('utf-8', { fatal: false });
+      documentContent = textDecoder.decode(bytes).substring(0, 5000); 
     }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -25,19 +28,14 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        messages: [{ role: "user", content: `Document: ${documentContent} \n\n Question: ${query}` }]
+        messages: [{ role: "user", content: `Context: ${documentContent}\n\nQuestion: ${query}` }]
       })
     });
 
     const result = await response.json();
-
-    if (result.choices && result.choices.length > 0) {
-      return new Response(JSON.stringify({ message: result.choices[0].message.content }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } else {
-      return new Response(JSON.stringify({ message: "OpenAI returned an error: " + JSON.stringify(result.error) }), { status: 500 });
-    }
+    return new Response(JSON.stringify({ message: result.choices[0].message.content }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (err) {
     return new Response(JSON.stringify({ status: "error", message: err.message }), { status: 500 });
   }
