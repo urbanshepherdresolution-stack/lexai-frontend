@@ -1,3 +1,5 @@
+import pdf from 'pdf-parse';
+
 export async function onRequestPost(context) {
   const apiKey = context.env.OPENAI_API_KEY;
 
@@ -6,19 +8,28 @@ export async function onRequestPost(context) {
     const query = formData.get('query');
     const file = formData.get('file');
 
-    let documentContent = "";
+    let documentContent = "No document content could be extracted.";
 
-    // Tweak 1: If a file exists, extract the text (this is a simplified text-based extraction)
     if (file && file.size > 0) {
-      documentContent = await file.text(); // This works for .txt and some basic text-based files
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      if (file.type === 'application/pdf') {
+        try {
+          const data = await pdf(buffer);
+          documentContent = data.text.trim();
+        } catch (e) {
+          documentContent = "Error: This PDF is either encrypted or a scanned image that cannot be parsed as text.";
+        }
+      } else {
+        documentContent = await file.text();
+      }
     }
 
-    // Tweak 2: Dynamically construct the prompt
-    const prompt = `
-      You are a legal assistant. 
-      Document content: ${documentContent}
-      User Question: ${query}
-    `;
+    // If the document content is empty after parsing, give the AI a hint
+    const finalPrompt = documentContent.length < 10 
+      ? `User asked: ${query}. (Note: The uploaded document seems empty or unreadable).`
+      : `Document Content: ${documentContent.substring(0, 8000)}... \n\n User Question: ${query}`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -28,7 +39,7 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }]
+        messages: [{ role: "user", content: finalPrompt }]
       })
     });
 
