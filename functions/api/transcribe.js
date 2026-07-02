@@ -4,21 +4,6 @@ export async function onRequestPost(context) {
   try {
     const formData = await context.request.formData();
     const query = formData.get('query');
-    const file = formData.get('file');
-
-    let documentContent = "No text could be extracted from this file.";
-
-    if (file) {
-      // If it's a PDF, we treat it as binary. 
-      // NOTE: Without a library, we can't parse complex PDFs perfectly,
-      // but we can extract simple strings if the PDF isn't encrypted.
-      const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      
-      // Simple extraction: look for readable text in the binary stream
-      const textDecoder = new TextDecoder('utf-8', { fatal: false });
-      documentContent = textDecoder.decode(bytes).substring(0, 5000); 
-    }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -28,7 +13,7 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        messages: [{ role: "user", content: `Context: ${documentContent}\n\nQuestion: ${query}` }]
+        messages: [{ role: "user", content: query }]
       })
     });
 
