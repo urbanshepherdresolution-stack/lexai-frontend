@@ -13,7 +13,13 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        messages: [{ role: "user", content: query }]
+        messages: [
+          { 
+            role: "system", 
+            content: "You are a professional legal assistant specialized in UK law. Provide accurate, concise answers grounded in UK legal principles. If a query is ambiguous, ask for clarification." 
+          },
+          { role: "user", content: query }
+        ]
       })
     });
 
