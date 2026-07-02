@@ -1,12 +1,15 @@
 export async function onRequestPost(context) {
-  // Use the OpenAI key you just saved in Settings
   const apiKey = context.env.OPENAI_API_KEY;
+
+  // Debugging check: Is the key missing entirely?
+  if (!apiKey) {
+    return new Response(JSON.stringify({ status: "error", message: "API key is missing in Cloudflare settings" }), { status: 500 });
+  }
 
   try {
     const formData = await context.request.formData();
     const query = formData.get('query');
     
-    // OpenAI API call
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { 
@@ -14,23 +17,22 @@ export async function onRequestPost(context) {
         "Authorization": `Bearer ${apiKey}` 
       },
       body: JSON.stringify({
-        model: "gpt-4o", // or your preferred model
+        model: "gpt-4o",
         messages: [{ role: "user", content: query }]
       })
     });
 
     const result = await response.json();
-    const aiResponse = result.choices[0].message.content;
+    
+    // Return the actual error message from OpenAI
+    if (result.error) {
+        return new Response(JSON.stringify({ status: "error", message: "OpenAI: " + result.error.message }), { status: 500 });
+    }
 
-    return new Response(JSON.stringify({ 
-      status: "success", 
-      message: aiResponse 
-    }), {
+    return new Response(JSON.stringify({ status: "success", message: result.choices[0].message.content }), {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (err) {
-    return new Response(JSON.stringify({ status: "error", message: "OpenAI call failed" }), {
-      status: 500
-    });
+    return new Response(JSON.stringify({ status: "error", message: err.message }), { status: 500 });
   }
 }
